@@ -1,0 +1,262 @@
+{
+  "meta": {
+    "title": "燭城物語 — ステージデータ",
+    "world": "トランシルヴァニアの霧の向こうに、かつて封印された城が再び姿を現す。鐘の音は東洋の寺にも似て、廊下の先では西洋の亡霊と本の妖怪が同じ影を踏みしめている。プレイヤーはベルモンドの血を引く者として、七つの「面」に分かれた城を登り詰める。",
+    "progression": "各面は (1) 雑魚（mobs）をすべて倒す → (2) boss.spawnAfterMobsCleared が true ならボスを出現させる → (3) ボス撃破で次の面へ。実装側では「雑魚の alive が尽きたフレーム」でボスを enemies に push する想定。",
+    "fieldGuide": {
+      "theme": "背景・足場色の切替キー（index.html の BG_THEMES と対応）。",
+      "archetype.mob": "zombie | bat | skeleton | ghost | medoje | ketossi | knight | heavy_mosu | leviathan | kakashi | bakeneko",
+      "archetype.boss": "ボス識別子。描画・AIは種別ごとにディスパッチ。",
+      "plats": "512x384 の Canvas 前提。地面は通常 y=320, h=64。",
+      "candles": "{ x, y } — ロウソク。破壊でスコア。",
+      "player": "面開始時のリスポーン位置。"
+    }
+  },
+  "stages": [
+    {
+      "id": 0,
+      "name": "城門の橋",
+      "theme": "gate_bridge",
+      "lore": "朽ちた石橋の先に、燭台だけがまだ役目を覚えている。ここではまだ「城の主人」は姿を見せない。",
+      "player": { "x": 32, "y": 283 },
+      "plats": [
+        { "x": 0, "y": 320, "w": 512, "h": 64 },
+        { "x": 56, "y": 248, "w": 110, "h": 16 },
+        { "x": 210, "y": 210, "w": 100, "h": 16 },
+        { "x": 364, "y": 262, "w": 136, "h": 16 },
+        { "x": 130, "y": 168, "w": 84, "h": 16 },
+        { "x": 308, "y": 154, "w": 92, "h": 16 }
+      ],
+      "mobs": [
+        { "archetype": "zombie", "x": 240, "y": 283 },
+        { "archetype": "zombie", "x": 400, "y": 283 },
+        { "archetype": "bat", "x": 160, "y": 148 },
+        { "archetype": "bat", "x": 380, "y": 118 }
+      ],
+      "boss": {
+        "archetype": "giant_bat",
+        "displayName": "夜を裂く大コウモリ",
+        "spawnAfterMobsCleared": true,
+        "x": 256,
+        "y": 120,
+        "stats": { "hp": 8, "w": 36, "h": 28 }
+      },
+      "candles": [
+        { "x": 108, "y": 247 },
+        { "x": 254, "y": 209 },
+        { "x": 426, "y": 261 },
+        { "x": 300, "y": 319 },
+        { "x": 166, "y": 167 }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "呪われた礼拝堂",
+      "theme": "chapel",
+      "lore": "ステンドグラスは色を失い、床には誰のものでもない足跡だけが残る。祈りの声は、どこか遠い国の言葉に聞こえる。",
+      "player": { "x": 40, "y": 283 },
+      "plats": [
+        { "x": 0, "y": 320, "w": 512, "h": 64 },
+        { "x": 40, "y": 260, "w": 96, "h": 16 },
+        { "x": 200, "y": 220, "w": 120, "h": 16 },
+        { "x": 360, "y": 180, "w": 120, "h": 16 },
+        { "x": 120, "y": 150, "w": 80, "h": 16 }
+      ],
+      "mobs": [
+        { "archetype": "zombie", "x": 220, "y": 283 },
+        { "archetype": "zombie", "x": 340, "y": 283 },
+        { "archetype": "skeleton", "x": 260, "y": 204 },
+        { "archetype": "ghost", "x": 380, "y": 140 }
+      ],
+      "boss": {
+        "archetype": "grave_wight",
+        "displayName": "墓守のワイト",
+        "spawnAfterMobsCleared": true,
+        "x": 300,
+        "y": 132,
+        "stats": { "hp": 12, "w": 28, "h": 44 }
+      },
+      "candles": [
+        { "x": 72, "y": 259 },
+        { "x": 248, "y": 219 },
+        { "x": 400, "y": 179 },
+        { "x": 154, "y": 149 }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "時計塔の影",
+      "theme": "clocktower",
+      "lore": "歯車の音が雷鳴に重なる。狭い足場では、風の音が羽音にも聞こえてくる。",
+      "player": { "x": 28, "y": 283 },
+      "plats": [
+        { "x": 0, "y": 320, "w": 512, "h": 64 },
+        { "x": 48, "y": 270, "w": 72, "h": 16 },
+        { "x": 160, "y": 230, "w": 72, "h": 16 },
+        { "x": 280, "y": 190, "w": 72, "h": 16 },
+        { "x": 400, "y": 150, "w": 88, "h": 16 }
+      ],
+      "mobs": [
+        { "archetype": "medoje", "x": 200, "y": 175 },
+        { "archetype": "bat", "x": 320, "y": 160 },
+        { "archetype": "ghost", "x": 250, "y": 175 },
+        { "archetype": "zombie", "x": 100, "y": 283 }
+      ],
+      "boss": {
+        "archetype": "tengu",
+        "displayName": "時を截つ天狗",
+        "spawnAfterMobsCleared": true,
+        "x": 420,
+        "y": 110,
+        "stats": { "hp": 16, "w": 32, "h": 40 }
+      },
+      "candles": [
+        { "x": 80, "y": 269 },
+        { "x": 192, "y": 229 },
+        { "x": 312, "y": 189 },
+        { "x": 432, "y": 149 }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "地下の水脈",
+      "theme": "aqueduct",
+      "lore": "石の隙間から湧く水は、どこか河童の棲む淵の匂いがする。城が西洋であっても、水は東へ流れる。",
+      "player": { "x": 36, "y": 283 },
+      "plats": [
+        { "x": 0, "y": 320, "w": 512, "h": 64 },
+        { "x": 80, "y": 250, "w": 140, "h": 16 },
+        { "x": 260, "y": 210, "w": 140, "h": 16 },
+        { "x": 100, "y": 170, "w": 100, "h": 16 },
+        { "x": 340, "y": 260, "w": 100, "h": 16 }
+      ],
+      "mobs": [
+        { "archetype": "skeleton", "x": 200, "y": 283 },
+        { "archetype": "ketossi", "x": 380, "y": 283 },
+        { "archetype": "leviathan", "x": 300, "y": 165 },
+        { "archetype": "bat", "x": 140, "y": 130 }
+      ],
+      "boss": {
+        "archetype": "kappa",
+        "displayName": "水脈の河童",
+        "spawnAfterMobsCleared": true,
+        "x": 280,
+        "y": 166,
+        "stats": { "hp": 14, "w": 30, "h": 36 }
+      },
+      "candles": [
+        { "x": 140, "y": 249 },
+        { "x": 320, "y": 209 },
+        { "x": 148, "y": 169 },
+        { "x": 380, "y": 259 }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "凍てつく庭園",
+      "theme": "frozen_garden",
+      "lore": "雪ではなく、燭の油が冷えた白い粉が舞う。吐息は霧となり、視界の端に女の影が差す。",
+      "player": { "x": 44, "y": 283 },
+      "plats": [
+        { "x": 0, "y": 320, "w": 512, "h": 64 },
+        { "x": 60, "y": 240, "w": 120, "h": 16 },
+        { "x": 220, "y": 200, "w": 120, "h": 16 },
+        { "x": 380, "y": 240, "w": 100, "h": 16 },
+        { "x": 180, "y": 140, "w": 160, "h": 16 }
+      ],
+      "mobs": [
+        { "archetype": "knight", "x": 120, "y": 283 },
+        { "archetype": "heavy_mosu", "x": 440, "y": 283 },
+        { "archetype": "ghost", "x": 300, "y": 175 },
+        { "archetype": "medoje", "x": 160, "y": 155 }
+      ],
+      "boss": {
+        "archetype": "yuki_onna",
+        "displayName": "白き雪女",
+        "spawnAfterMobsCleared": true,
+        "x": 240,
+        "y": 96,
+        "stats": { "hp": 18, "w": 30, "h": 48 }
+      },
+      "candles": [
+        { "x": 108, "y": 239 },
+        { "x": 268, "y": 199 },
+        { "x": 428, "y": 239 },
+        { "x": 248, "y": 139 }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "大回廊 — 鬼の蹲る所",
+      "theme": "oni_corridor",
+      "lore": "松明の明かりが鬼の角を長く伸ばす。廊下は城の心臓に続く最後の門前である。",
+      "player": { "x": 32, "y": 283 },
+      "plats": [
+        { "x": 0, "y": 320, "w": 512, "h": 64 },
+        { "x": 90, "y": 260, "w": 100, "h": 16 },
+        { "x": 230, "y": 220, "w": 100, "h": 16 },
+        { "x": 370, "y": 180, "w": 100, "h": 16 },
+        { "x": 150, "y": 150, "w": 220, "h": 16 }
+      ],
+      "mobs": [
+        { "archetype": "kakashi", "x": 140, "y": 283 },
+        { "archetype": "bakeneko", "x": 280, "y": 283 },
+        { "archetype": "skeleton", "x": 420, "y": 283 },
+        { "archetype": "ketossi", "x": 200, "y": 130 },
+        { "archetype": "bat", "x": 360, "y": 140 }
+      ],
+      "boss": {
+        "archetype": "oni",
+        "displayName": "大回廊の鬼",
+        "spawnAfterMobsCleared": true,
+        "x": 256,
+        "y": 102,
+        "stats": { "hp": 24, "w": 40, "h": 48 }
+      },
+      "candles": [
+        { "x": 128, "y": 259 },
+        { "x": 268, "y": 219 },
+        { "x": 408, "y": 179 },
+        { "x": 256, "y": 149 }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "最上階 — 玉座の間",
+      "theme": "throne",
+      "lore": "長い旅路の果て、城の主は椅子に座っていない。彼は影そのものであり、再び夜を支配しようとしている。",
+      "player": { "x": 48, "y": 283 },
+      "plats": [
+        { "x": 0, "y": 320, "w": 512, "h": 64 },
+        { "x": 100, "y": 240, "w": 120, "h": 16 },
+        { "x": 300, "y": 200, "w": 120, "h": 16 },
+        { "x": 180, "y": 160, "w": 160, "h": 16 },
+        { "x": 220, "y": 120, "w": 80, "h": 16 }
+      ],
+      "mobs": [
+        { "archetype": "medoje", "x": 160, "y": 165 },
+        { "archetype": "ketossi", "x": 280, "y": 283 },
+        { "archetype": "knight", "x": 360, "y": 283 },
+        { "archetype": "heavy_mosu", "x": 120, "y": 283 },
+        { "archetype": "leviathan", "x": 280, "y": 155 },
+        { "archetype": "kakashi", "x": 400, "y": 283 },
+        { "archetype": "bakeneko", "x": 220, "y": 283 }
+      ],
+      "boss": {
+        "archetype": "night_lord",
+        "displayName": "夜を統べる古城の主",
+        "spawnAfterMobsCleared": true,
+        "x": 256,
+        "y": 72,
+        "stats": { "hp": 32, "w": 40, "h": 56 },
+        "phases": 2
+      },
+      "candles": [
+        { "x": 154, "y": 239 },
+        { "x": 334, "y": 199 },
+        { "x": 246, "y": 159 },
+        { "x": 256, "y": 319 }
+      ]
+    }
+  ]
+}

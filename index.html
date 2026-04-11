@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080010">
+<title>燭城物語 — 横スクロール</title>
+<style>
+* {
+  margin: 0; padding: 0; box-sizing: border-box;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+html, body {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  overscroll-behavior: none;
+}
+body {
+  background: #080010;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  gap: 8px;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 6px calc(6px + env(safe-area-inset-bottom, 0px));
+}
+#gameColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  width: 100%;
+  max-width: 100vw;
+}
+#canvasWrap {
+  position: relative;
+  width: min(100vw - 12px, calc((100dvh - 200px) * 512 / 384));
+  max-width: 100%;
+  aspect-ratio: 512 / 384;
+  flex-shrink: 0;
+  touch-action: none;
+}
+#c {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 3px solid #500000;
+  box-shadow: 0 0 40px #8b000055;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+#ctrl {
+  color: #cc6600;
+  font: bold 12px monospace;
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 0 8px;
+  max-width: 100%;
+}
+#badge { color: #336699; font: 11px monospace; opacity: 0.65; text-align: center; padding: 0 8px; }
+@media (max-width: 1024px), (pointer: coarse) {
+  #ctrl { font-size: 11px; }
+}
+/* 142-cyber-blade / 140-asteroid-heroes 系: タッチ用仮想ボタン */
+#virtual-controls {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 50;
+  pointer-events: none;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px 10px calc(6px + env(safe-area-inset-bottom, 0px));
+  gap: 0;
+  background: linear-gradient(0deg, rgba(8, 0, 16, 0.94) 0%, rgba(8, 0, 16, 0.5) 60%, transparent 100%);
+}
+@media (max-width: 1024px), (pointer: coarse) {
+  #virtual-controls { display: flex; }
+}
+#virtual-controls.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  filter: grayscale(0.35);
+}
+.vc-main {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+.vc-main > * { pointer-events: auto; }
+.cv-dpad {
+  position: relative;
+  width: min(128px, 26vw);
+  height: min(128px, 26vw);
+  opacity: 0.78;
+}
+.cv-dpad-btn {
+  position: absolute;
+  width: 32.3%;
+  height: 32.3%;
+  touch-action: none;
+  background: linear-gradient(145deg, rgba(60, 20, 20, 0.95), rgba(24, 8, 8, 0.98));
+  border: 2px solid rgba(180, 60, 40, 0.45);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e8a070;
+  font-size: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.08s, transform 0.08s;
+  box-shadow: 0 0 10px rgba(139, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.cv-dpad-btn:active, .cv-dpad-btn.pressed {
+  background: linear-gradient(145deg, rgba(100, 36, 28, 0.98), rgba(40, 12, 8, 0.99));
+  transform: translateY(1px);
+}
+.cv-dpad-btn.left  { top: 33.3%; left: 0; }
+.cv-dpad-btn.right { top: 33.3%; right: 0; }
+.cv-dpad-btn.up    { top: 0; left: 33.3%; }
+.cv-dpad-btn.down  { bottom: 0; left: 33.3%; }
+.cv-dpad::after {
+  content: '';
+  position: absolute;
+  top: 33.3%; left: 33.3%;
+  width: 33.4%; height: 33.4%;
+  background: rgba(20, 6, 10, 0.9);
+  border: 1px solid rgba(120, 40, 30, 0.35);
+  border-radius: 4px;
+  pointer-events: none;
+}
+.cv-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  opacity: 0.85;
+}
+.cv-act-row { display: flex; flex-direction: row; gap: 10px; align-items: flex-end; }
+.cv-btn {
+  touch-action: none;
+  min-width: 56px;
+  min-height: 50px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border: 2px solid rgba(255, 200, 120, 0.35);
+  color: #fff;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.85);
+  transition: transform 0.08s ease, opacity 0.08s ease;
+}
+.cv-btn:active, .cv-btn.pressed { transform: translateY(2px); opacity: 0.92; }
+.cv-btn-jump {
+  background: radial-gradient(circle at 35% 30%, #6a4020, #281008);
+  border-color: rgba(212, 164, 40, 0.45);
+  box-shadow: 0 4px 0 #180808, 0 0 12px rgba(180, 80, 20, 0.25);
+}
+.cv-btn-whip {
+  background: radial-gradient(circle at 35% 30%, #804020, #301810);
+  border-color: rgba(255, 180, 80, 0.4);
+  box-shadow: 0 4px 0 #180810, 0 0 12px rgba(255, 140, 40, 0.2);
+}
+.cv-btn small { display: block; font-size: 8px; font-weight: 600; opacity: 0.88; margin-top: 2px; }
+.vc-hint-bar {
+  display: none;
+  width: 100%;
+  text-align: center;
+  font-size: 9px;
+  line-height: 1.4;
+  color: rgba(200, 160, 140, 0.45);
+  padding: 4px 4px 0;
+  margin-top: 2px;
+  border-top: 1px solid rgba(120, 40, 40, 0.25);
+  pointer-events: none;
+}
+@media (max-width: 1024px), (pointer: coarse) {
+  .vc-hint-bar { display: block; }
+}
+</style>
+</head>
+<body>
+<div id="gameColumn">
+  <div id="canvasWrap">
+    <canvas id="c" width="512" height="384"></canvas>
+  </div>
+  <div id="ctrl">[ ← → ] 移動 &nbsp;|&nbsp; [ ↑ / X ] ジャンプ &nbsp;|&nbsp; [ Z / Space ] ムチ攻撃</div>
+  <div id="badge">ES2023/24 ✦ Array.toSorted · Array.with · Array.findLast · Object.groupBy · Promise.withResolvers</div>
+</div>
+
+<div id="virtual-controls" aria-label="タッチ操作">
+  <div class="vc-main">
+    <div class="cv-dpad" id="cv-dpad">
+      <div class="cv-dpad-btn up cv-btn-dir"    data-dir="up">▲</div>
+      <div class="cv-dpad-btn left cv-btn-dir"  data-dir="left">◀</div>
+      <div class="cv-dpad-btn right cv-btn-dir" data-dir="right">▶</div>
+      <div class="cv-dpad-btn down cv-btn-dir"  data-dir="down">▼</div>
+    </div>
+    <div class="cv-actions">
+      <div class="cv-act-row">
+        <button type="button" class="cv-btn cv-btn-jump" id="cv-jump">↑<small>ジャンプ</small></button>
+        <button type="button" class="cv-btn cv-btn-whip" id="cv-whip">Z<small>ムチ</small></button>
+      </div>
+    </div>
+  </div>
+  <div class="vc-hint-bar" aria-hidden="true">[◀▶] 移動 · [↑] ジャンプ · [Z] ムチ（キーボードと同じ）</div>
+</div>
+
+<script>
+'use strict';
+
+// ES2023/2024 の一部 API が無い環境だと起動直後に例外になり Enter が効かないため最低限の互換を入れる
+(function () {
+  if (typeof Promise.withResolvers !== 'function') {
+    Promise.withResolvers = function () {
+      var resolve, reject;
+      var promise = new Promise(function (res, rej) { resolve = res; reject = rej; });
+      return { promise: promise, resolve: resolve, reject: reject };
+    };
+  }
+  if (typeof Object.groupBy !== 'function') {
+    Object.groupBy = function (items, callbackFn) {
+      var result = Object.create(null);
+      var idx = 0;
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var key = callbackFn(item, idx++);
+        var sk = String(key);
+        if (!result[sk]) result[sk] = [];
+        result[sk].push(item);
+      }
+      return result;
+    };
+  }
+  if (!Array.prototype.with) {
+    Array.prototype.with = function (index, value) {
+      var copy = this.slice();
+      copy[index] = value;
+      return copy;
+    };
+  }
+  if (!Array.prototype.findLast) {
+    Array.prototype.findLast = function (predicate) {
+      for (var i = this.length - 1; i >= 0; i--) {
+        if (predicate(this[i], i, this)) return this[i];
+      }
+      return undefined;
+    };
+  }
+  if (!Array.prototype.toSorted) {
+    Array.prototype.toSorted = function (compareFn) {
+      return compareFn ? this.slice().sort(compareFn) : this.slice().sort();
+    };
+  }
+})();
+
+// ═══════════════════════════════════════════════════════
+//  定数
+// ═══════════════════════════════════════════════════════
+const W = 512, H = 384;
+const G = 0.45;        // 重力加速度
+const PSPD = 2.8;      // プレイヤー移動速度
+const JV = -11.2;      // ジャンプ初速
+const WDUR = 22;       // ムチ持続フレーム数
+const WRANGE = 72;     // ムチ射程(px)
+const INVDUR = 88;     // 無敵時間(フレーム)
+/** 全ボスの stats.w / stats.h に掛ける倍率 */
+const BOSS_SIZE_MULT = 3;
+/** 1面・大コウモリ：PNG 収め後のサイズに掛ける倍率（「現在の」見た目の4倍） */
+const GIANT_BAT_REL_MULT = 4;
+const isMobileUa = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+const COL = {
+  bg:'#06000e', brickA:'#2e1200', brickB:'#3e1a00', brickC:'#502000',
+  floor:'#3a1800', floorHi:'#5a2c0a',
+  pl:'#e07828', plDark:'#8c3c10', skin:'#f0c080', hair:'#3c1c00', cape:'#8c001c',
+  whip:'#d4a428', whipTip:'#ffe040',
+  zombie:'#3c5c28', zombieDark:'#243818', zombieEye:'#e02000',
+  bat:'#4c3c68', batWing:'#34204a', batEye:'#e00000',
+  candle:'#b89020', flame1:'#ff4400', flame2:'#ffaa00',
+  score:'#ffd840', hp:'#ff2020',
+  particles:['#ff6600','#ffaa00','#ff2200','#ffdd00','#ff8800'],
+};
+
+// 面 theme → 背景・足場の色（stages.json の theme と対応）
+const BG_THEMES = {
+  gate_bridge: {
+    bg: '#06000e', brickA: '#2e1200', brickB: '#3e1a00', brickC: '#502000',
+    floor: '#3a1800', floorHi: '#5a2c0a', plat: '#4a2000',
+    winFrame: '#100830', winInner: '#1a0c58', winGlow: '#2a1080',
+    win: [[80, 52], [296, 36], [460, 72]],
+  },
+  chapel: {
+    bg: '#080818', brickA: '#1c1840', brickB: '#282060', brickC: '#302278',
+    floor: '#2a2048', floorHi: '#45308a', plat: '#383070',
+    winFrame: '#180838', winInner: '#201060', winGlow: '#4040b0',
+    win: [[48, 40], [220, 28], [400, 48], [320, 72]],
+  },
+  clocktower: {
+    bg: '#0a0a10', brickA: '#282830', brickB: '#343440', brickC: '#404048',
+    floor: '#323038', floorHi: '#585868', plat: '#454550',
+    winFrame: '#181820', winInner: '#282830', winGlow: '#606070',
+    win: [[64, 44], [256, 32], [420, 56]],
+  },
+  aqueduct: {
+    bg: '#051218', brickA: '#143844', brickB: '#1a4860', brickC: '#205878',
+    floor: '#1c4048', floorHi: '#2a6880', plat: '#245a68',
+    winFrame: '#082030', winInner: '#103848', winGlow: '#206090',
+    win: [[100, 48], [280, 36]],
+  },
+  frozen_garden: {
+    bg: '#0a1018', brickA: '#304050', brickB: '#405868', brickC: '#507090',
+    floor: '#384860', floorHi: '#6890b0', plat: '#506878',
+    winFrame: '#182838', winInner: '#284058', winGlow: '#7098c0',
+    win: [[72, 36], [240, 28], [400, 44]],
+  },
+  oni_corridor: {
+    bg: '#120608', brickA: '#481818', brickB: '#602020', brickC: '#782828',
+    floor: '#401010', floorHi: '#703028', plat: '#582018',
+    winFrame: '#300808', winInner: '#501010', winGlow: '#903838',
+    win: [[56, 48], [200, 40], [360, 52], [440, 36]],
+  },
+  throne: {
+    bg: '#040008', brickA: '#301848', brickB: '#402060', brickC: '#502878',
+    floor: '#281038', floorHi: '#583090', plat: '#402070',
+    winFrame: '#200040', winInner: '#381070', winGlow: '#7040c0',
+    win: [[96, 24], [256, 20], [416, 28]],
+  },
+};
+
+function getCurrentStageTheme() {
+  const st = STAGES_DATA && STAGES_DATA.stages && STAGES_DATA.stages[stageIndex];
+  return (st && st.theme) || 'gate_bridge';
+}
+
+function getBgPalette() {
+  return BG_THEMES[getCurrentStageTheme()] || BG_THEMES.gate_bridge;
+}
+
+// ═══════════════════════════════════════════════════════
+//  Canvas
+// ═══════════════════════════════════════════════════════
+const cv = document.getElementById('c');
+const cx = cv.getContext('2d');
+cx.imageSmoothingEnabled = false;
+
+/** 大コウモリボス（giant_bat）のスプライト — 同一ディレクトリの PNG */
+const IMG_GIANT_BAT = new Image();
+IMG_GIANT_BAT.src = 'Gemini_Generated_Image_z23ya3z23ya3z23y-removebg-preview.png';
+
+// ═══════════════════════════════════════════════════════
+//  入力
+// ═══════════════════════════════════════════════════════
+const K = {};
+addEventListener('keydown', e => { K[e.code] = true;  e.preventDefault(); });
+addEventListener('keyup',   e => { K[e.code] = false; });
+
+// ═══════════════════════════════════════════════════════
+//  ステージデータ（stages.json） / フォールバック
+// ═══════════════════════════════════════════════════════
+const LEGACY_PLATS = [
+  { x:   0, y: 320, w: 512, h: 64 },
+  { x:  56, y: 248, w: 110, h: 16 },
+  { x: 210, y: 210, w: 100, h: 16 },
+  { x: 364, y: 262, w: 136, h: 16 },
+  { x: 130, y: 168, w:  84, h: 16 },
+  { x: 308, y: 154, w:  92, h: 16 },
+];
+
+/** @type {{ meta?: object, stages: object[] } | null} */
+let STAGES_DATA = null;
+let stageIndex = 0;
+let PLATS = LEGACY_PLATS.map(p => ({ ...p }));
+
+function clonePlats(arr) {
+  return arr.map(p => ({ x: p.x, y: p.y, w: p.w, h: p.h }));
+}
+
+function loadStagesJson() {
+  return fetch('stages.json', { cache: 'no-store' })
+    .then(r => {
+      if (!r.ok) throw new Error('stages.json HTTP ' + r.status);
+      return r.json();
+    })
+    .then(data => {
+      STAGES_DATA = data;
+      const s0 = data.stages && data.stages[0];
+      if (s0 && s0.plats && gs === 'title') PLATS = clonePlats(s0.plats);
+    })
+    .catch(() => {
+      STAGES_DATA = null;
+      PLATS = clonePlats(LEGACY_PLATS);
+    });
+}
+
+// ═══════════════════════════════════════════════════════
+//  ゲーム状態変数
+// ═══════════════════════════════════════════════════════
+let gs = 'title';
+let pl, enemies, candles, ptcls, score;
+/** @type {object | null} stages.json の boss オブジェクト（出現前のみ保持） */
+let stageBossDef = null;
+let bossSpawned = true;
+
+// ───────────────────────────────────────────────────────
+//  【JS新機能①】Promise.withResolvers (ES2024)
+//  ゲーム状態遷移（タイトル→ゲーム、ゲームオーバー→リスタート）を
+//  キー入力待ちのPromiseで管理する
+// ───────────────────────────────────────────────────────
+function waitKey(code) {
+  const { promise, resolve } = Promise.withResolvers();
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    removeEventListener('keydown', onKey);
+    removeEventListener('touchend', onTouch, touchOpts);
+    resolve();
+  };
+  const onKey = e => {
+    if (e.code === code) finish();
+  };
+  const touchOpts = { capture: true, passive: false };
+  const onTouch = e => {
+    if (e.target.closest && e.target.closest('#virtual-controls')) return;
+    e.preventDefault();
+    finish();
+  };
+  addEventListener('keydown', onKey);
+  addEventListener('touchend', onTouch, touchOpts);
+  return promise;
+}
+
+// ═══════════════════════════════════════════════════════
+//  初期化
+// ═══════════════════════════════════════════════════════
+function initGame() {
+  const st = STAGES_DATA && STAGES_DATA.stages && STAGES_DATA.stages[stageIndex];
+
+  stageBossDef = null;
+  bossSpawned = true;
+
+  if (st && st.plats && st.plats.length) {
+    PLATS = clonePlats(st.plats);
+    const px = st.player && typeof st.player.x === 'number' ? st.player.x : 24;
+    const py = st.player && typeof st.player.y === 'number' ? st.player.y : 283;
+    pl = {
+      x: px, y: py, w: 22, h: 36,
+      vx: 0, vy: 0, facing: 1,
+      hp: 5, atk: false, atkT: 0,
+      inv: false, invT: 0,
+      ground: false, wf: 0, wt: 0,
+    };
+    enemies = (st.mobs || []).map(m => mkMobFromArchetype(m));
+    candles = (st.candles || []).map(c => ({ x: c.x, y: c.y, a: true }));
+    if (st.boss && st.boss.spawnAfterMobsCleared) {
+      stageBossDef = st.boss;
+      bossSpawned = false;
+    }
+  } else {
+    PLATS = clonePlats(LEGACY_PLATS);
+    pl = {
+      x: 24, y: 283, w: 22, h: 36,
+      vx: 0, vy: 0, facing: 1,
+      hp: 5, atk: false, atkT: 0,
+      inv: false, invT: 0,
+      ground: false, wf: 0, wt: 0,
+    };
+    enemies = [
+      mkZombie(260, 283),
+      mkZombie(440, 283),
+      mkZombie(222, 173),
+      mkBat(155, 148),
+      mkBat(380, 118),
+    ];
+    candles = [
+      { x: 108, y: 247, a: true },
+      { x: 254, y: 209, a: true },
+      { x: 426, y: 261, a: true },
+      { x: 300, y: 319, a: true },
+      { x: 166, y: 167, a: true },
+    ];
+  }
+
+  ptcls = [];
+  score = 0;
+  gs = 'playing';
+  syncVirtualControlsFromGs();
+}
+
+function mkZombie(x, y) {
+  return { t:'z', x, y, w:20, h:36, vx:0, vy:0, hp:2, alive:true, ht:0, ground:false };
+}
+function mkBat(x, y) {
+  return { t:'b', x, y, w:18, h:14, ox:x, oy:y, ti:Math.random()*Math.PI*2, hp:1, alive:true, ht:0 };
+}
+function mkSkeleton(x, y) {
+  return { t:'s', x, y, w:18, h:36, vx:0, vy:0, hp:2, alive:true, ht:0, ground:false };
+}
+function mkGhost(x, y) {
+  return { t:'h', x, y, w:22, h:20, ox:x, oy:y, ti:Math.random()*Math.PI*2, hp:1, alive:true, ht:0 };
+}
+function mkMedoje(x, y) {
+  return { t:'d', x, y, w:24, h:28, ox:x, oy:y, ti:Math.random()*Math.PI*2, hp:2, alive:true, ht:0 };
+}
+function mkKetossi(x, y) {
+  return { t:'T', x, y, w:22, h:18, vx:0, vy:0, hp:3, alive:true, ht:0, ground:false };
+}
+function mkKnightMob(x, y) {
+  return { t:'n', x, y, w:22, h:38, vx:0, vy:0, hp:4, alive:true, ht:0, ground:false };
+}
+function mkHeavyMosu(x, y) {
+  return { t:'H', x, y, w:16, h:14, vx:0, vy:0, hp:1, alive:true, ht:0, ground:false, burstT:0 };
+}
+function mkLeviathan(x, y) {
+  return { t:'L', x, y, w:28, h:18, ox:x, oy:y, ti:Math.random()*Math.PI*2, hp:2, alive:true, ht:0 };
+}
+function mkKakashi(x, y) {
+  return { t:'K', x, y, w:18, h:40, vx:0, vy:0, hp:2, alive:true, ht:0, ground:false };
+}
+function mkBakeneko(x, y) {
+  return { t:'B', x, y, w:20, h:20, vx:0, vy:0, hp:1, alive:true, ht:0, ground:false, hopT:0 };
+}
+
+function mkMobFromArchetype(m) {
+  const a = m.archetype || 'zombie';
+  const x = m.x, y = m.y;
+  if (a === 'bat') return mkBat(x, y);
+  if (a === 'skeleton') return mkSkeleton(x, y);
+  if (a === 'ghost') return mkGhost(x, y);
+  if (a === 'medoje') return mkMedoje(x, y);
+  if (a === 'ketossi') return mkKetossi(x, y);
+  if (a === 'knight') return mkKnightMob(x, y);
+  if (a === 'heavy_mosu') return mkHeavyMosu(x, y);
+  if (a === 'leviathan') return mkLeviathan(x, y);
+  if (a === 'kakashi') return mkKakashi(x, y);
+  if (a === 'bakeneko') return mkBakeneko(x, y);
+  return mkZombie(x, y);
+}
+
+function isFlyBossArchetype(k) {
+  return k === 'giant_bat' || k === 'tengu' || k === 'yuki_onna';
+}
+
+function mkBossFromDef(def) {
+  const st = def.stats || { hp: 8, w: 32, h: 28 };
+  const sw = st.w != null ? st.w : 32;
+  const sh = st.h != null ? st.h : 28;
+  let w = Math.round(sw * BOSS_SIZE_MULT);
+  let h = Math.round(sh * BOSS_SIZE_MULT);
+  const hp = st.hp;
+  const k = def.archetype || 'giant_bat';
+  const name = def.displayName || 'ボス';
+  // 1面・大コウモリ：PNG 全体（透明画素込み）を stats×3 内に収めたうえで GIANT_BAT_REL_MULT 倍→画面内に再収め
+  if (k === 'giant_bat' && stageIndex === 0) {
+    const im = IMG_GIANT_BAT;
+    if (im.complete && im.naturalWidth > 0) {
+      const iw = im.naturalWidth, ih = im.naturalHeight;
+      const tw = Math.round((st.w != null ? st.w : 36) * BOSS_SIZE_MULT);
+      const th = Math.round((st.h != null ? st.h : 28) * BOSS_SIZE_MULT);
+      const scale = Math.min(tw / iw, th / ih);
+      w = Math.round(iw * scale);
+      h = Math.round(ih * scale);
+    }
+    w = Math.round(w * GIANT_BAT_REL_MULT);
+    h = Math.round(h * GIANT_BAT_REL_MULT);
+    const oy = def.y != null ? def.y : 120;
+    const maxWBox = W - 16;
+    const maxHBox = Math.max(36, H - oy - 108);
+    const fit = Math.min(1, maxWBox / w, maxHBox / h);
+    w = Math.max(12, ~~(w * fit));
+    h = Math.max(12, ~~(h * fit));
+  }
+  if (isFlyBossArchetype(k)) {
+    let sx = def.x, sy = def.y;
+    if (k === 'giant_bat') {
+      const bx = def.x != null ? def.x : ~~(W / 2 - w / 2);
+      const by = def.y != null ? def.y : 100;
+      sx = Math.max(8, Math.min(W - w - 8, bx));
+      sy = Math.max(8, Math.min(H - h - 110, by));
+    }
+    return {
+      t: 'boss', kind: k, mode: 'fly', x: sx, y: sy, w, h,
+      ox: sx, oy: sy, ti: Math.random() * Math.PI * 2,
+      hp, alive: true, ht: 0, displayName: name,
+    };
+  }
+  const wx = def.x != null ? def.x : 200;
+  const wy = def.y != null ? def.y : 100;
+  const wxc = Math.max(4, Math.min(W - w - 4, wx));
+  return {
+    t: 'boss', kind: k, mode: 'walk', x: wxc, y: wy, w, h,
+    vx: 0, vy: 0, hp, alive: true, ht: 0, ground: false, displayName: name,
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+//  ユーティリティ
+// ═══════════════════════════════════════════════════════
+const overlaps = (a, b) =>
+  a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+
+// ───────────────────────────────────────────────────────
+//  【JS新機能②】Array.prototype.findLast (ES2023)
+//  下から検索し、エンティティが乗るべき「最後に見つかる」
+//  プラットフォームを取得する（重なり時に最前面を優先）
+// ───────────────────────────────────────────────────────
+function landOn(e) {
+  const p = PLATS.findLast(p =>
+    e.x + e.w > p.x       && e.x < p.x + p.w &&
+    e.y + e.h > p.y       &&
+    e.y + e.h < p.y + p.h + Math.abs(e.vy) + 5 &&
+    e.vy >= 0
+  );
+  if (p) { e.y = p.y - e.h; e.vy = 0; e.ground = true; }
+  else    { e.ground = false; }
+}
+
+function burst(x, y, n = 8) {
+  for (let i = 0; i < n; i++) {
+    const a = (Math.PI * 2 * i / n) + (Math.random() - .5) * .9;
+    const s = 1.5 + Math.random() * 2.2;
+    ptcls.push({
+      x, y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s - 1.8,
+      life: 26 + ~~(Math.random() * 14),
+      col: COL.particles[i % COL.particles.length],
+    });
+  }
+}
+
+function syncVirtualControlsFromGs() {
+  const vc = document.getElementById('virtual-controls');
+  if (vc) vc.classList.toggle('disabled', gs !== 'playing');
+}
+
+/** 140-asteroid-heroes 系: Pointer Events + capture（タッチ／マウス共通） */
+function initVirtualControls() {
+  const vc = document.getElementById('virtual-controls');
+  if (!vc) return;
+  const mapDir = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
+  function bindPointer(el, codes) {
+    const down = e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      codes.forEach(c => { K[c] = true; });
+      el.classList.add('pressed');
+    };
+    const up = e => {
+      e.preventDefault();
+      codes.forEach(c => { K[c] = false; });
+      el.classList.remove('pressed');
+      try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    const lost = () => {
+      codes.forEach(c => { K[c] = false; });
+      el.classList.remove('pressed');
+    };
+    el.addEventListener('pointerdown', down, { passive: false });
+    el.addEventListener('pointerup', up, { passive: false });
+    el.addEventListener('pointercancel', up, { passive: false });
+    el.addEventListener('lostpointercapture', lost);
+  }
+  vc.querySelectorAll('.cv-btn-dir').forEach(btn => {
+    const c = mapDir[btn.dataset.dir];
+    if (c) bindPointer(btn, [c]);
+  });
+  const jump = document.getElementById('cv-jump');
+  const whip = document.getElementById('cv-whip');
+  if (jump) bindPointer(jump, ['ArrowUp']);
+  if (whip) bindPointer(whip, ['KeyZ']);
+}
+
+// ═══════════════════════════════════════════════════════
+//  更新ロジック
+// ═══════════════════════════════════════════════════════
+function update() {
+  syncVirtualControlsFromGs();
+  if (gs !== 'playing') return;
+
+  // ─── プレイヤー操作 ──────────────────────────────
+  pl.vx = 0;
+  if (K.ArrowLeft)  { pl.vx = -PSPD; pl.facing = -1; }
+  if (K.ArrowRight) { pl.vx =  PSPD; pl.facing =  1; }
+  if ((K.ArrowUp || K.KeyX) && pl.ground) { pl.vy = JV; }
+  if ((K.KeyZ || K.Space) && !pl.atk)     { pl.atk = true; pl.atkT = WDUR; }
+
+  if (pl.atk) { if (--pl.atkT <= 0) pl.atk = false; }
+  if (pl.inv) { if (--pl.invT <= 0) pl.inv = false; }
+  if (pl.vx !== 0) { if (++pl.wt > 8) { pl.wf ^= 1; pl.wt = 0; } }
+
+  pl.vy += G;
+  pl.x = Math.max(0, Math.min(W - pl.w, pl.x + pl.vx));
+  pl.y += pl.vy;
+  if (pl.y > H + 60) pl.hp = 0;
+  landOn(pl);
+
+  // ─── 敵の更新 ────────────────────────────────────
+  // 【JS新機能③】Object.groupBy (ES2024)
+  // 敵を種別ごとにグループ化し、タイプ別のAIロジックを適用する
+  const grp = Object.groupBy(enemies, e => e.alive ? e.t : '_');
+
+  // ゾンビAI：プレイヤーに向かって歩く
+  (grp.z || []).forEach(z => {
+    z.ht = Math.max(0, z.ht - 1);
+    const dir = (pl.x + pl.w/2) > (z.x + z.w/2) ? 1 : -1;
+    z.vx = dir * 0.7;
+    z.vy += G;
+    z.x += z.vx;
+    z.y += z.vy;
+    z.x = Math.max(0, Math.min(W - z.w, z.x));
+    landOn(z);
+
+    if (!pl.inv && overlaps(pl, z)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -6;
+      pl.vx   = -pl.facing * 4; // のけぞり
+    }
+  });
+
+  // コウモリAI：サイン波で飛行
+  (grp.b || []).forEach(b => {
+    b.ht = Math.max(0, b.ht - 1);
+    b.ti += 0.046;
+    b.x = b.ox + Math.cos(b.ti * 0.62) * 90;
+    b.y = b.oy + Math.sin(b.ti) * 46;
+
+    if (!pl.inv && overlaps(pl, b)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -4;
+    }
+  });
+
+  // スケルトンAI（ゾンビと同型）
+  (grp.s || []).forEach(sk => {
+    sk.ht = Math.max(0, sk.ht - 1);
+    const dir = (pl.x + pl.w/2) > (sk.x + sk.w/2) ? 1 : -1;
+    sk.vx = dir * 0.78;
+    sk.vy += G;
+    sk.x += sk.vx;
+    sk.y += sk.vy;
+    sk.x = Math.max(0, Math.min(W - sk.w, sk.x));
+    landOn(sk);
+
+    if (!pl.inv && overlaps(pl, sk)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -6;
+      pl.vx   = -pl.facing * 4;
+    }
+  });
+
+  // 幽霊AI（ゆっくり漂う）
+  (grp.h || []).forEach(h => {
+    h.ht = Math.max(0, h.ht - 1);
+    h.ti += 0.032;
+    h.x = h.ox + Math.cos(h.ti * 0.55) * 72;
+    h.y = h.oy + Math.sin(h.ti * 0.9) * 42;
+
+    if (!pl.inv && overlaps(pl, h)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -3;
+    }
+  });
+
+  // メドジェ：漂い＋やや大きめ（幽霊より遅い）
+  (grp.d || []).forEach(m => {
+    m.ht = Math.max(0, m.ht - 1);
+    m.ti += 0.022;
+    m.x = m.ox + Math.cos(m.ti * 0.42) * 84;
+    m.y = m.oy + Math.sin(m.ti * 0.72) * 36;
+    if (!pl.inv && overlaps(pl, m)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -3;
+    }
+  });
+
+  // けトッシー：俊足の地上追跡（3HP）
+  (grp.T || []).forEach(dog => {
+    dog.ht = Math.max(0, dog.ht - 1);
+    const dir = (pl.x + pl.w/2) > (dog.x + dog.w/2) ? 1 : -1;
+    dog.vx = dir * 0.92;
+    dog.vy += G;
+    dog.x += dog.vx;
+    dog.y += dog.vy;
+    dog.x = Math.max(0, Math.min(W - dog.w, dog.x));
+    landOn(dog);
+    if (!pl.inv && overlaps(pl, dog)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -6;
+      pl.vx   = -pl.facing * 4;
+    }
+  });
+
+  // ないと：重装歩兵（遅い・高HP）
+  (grp.n || []).forEach(kn => {
+    kn.ht = Math.max(0, kn.ht - 1);
+    const dir = (pl.x + pl.w/2) > (kn.x + kn.w/2) ? 1 : -1;
+    kn.vx = dir * 0.5;
+    kn.vy += G;
+    kn.x += kn.vx;
+    kn.y += kn.vy;
+    kn.x = Math.max(0, Math.min(W - kn.w, kn.x));
+    landOn(kn);
+    if (!pl.inv && overlaps(pl, kn)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -5;
+      pl.vx   = -pl.facing * 5;
+    }
+  });
+
+  // ヘビーもす：小柄だがバースト疾走
+  (grp.H || []).forEach(r => {
+    r.ht = Math.max(0, r.ht - 1);
+    r.burstT = (r.burstT + 1) % 48;
+    const dir = (pl.x + pl.w/2) > (r.x + r.w/2) ? 1 : -1;
+    r.vx = dir * (r.burstT < 18 ? 1.32 : 0.22);
+    r.vy += G;
+    r.x += r.vx;
+    r.y += r.vy;
+    r.x = Math.max(0, Math.min(W - r.w, r.x));
+    landOn(r);
+    if (!pl.inv && overlaps(pl, r)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -4;
+    }
+  });
+
+  // リバイアサン：大振りの飛蛇軌道
+  (grp.L || []).forEach(lv => {
+    lv.ht = Math.max(0, lv.ht - 1);
+    lv.ti += 0.026;
+    lv.x = lv.ox + Math.cos(lv.ti * 0.48) * 128;
+    lv.y = lv.oy + Math.sin(lv.ti * 0.82) * 54;
+    if (!pl.inv && overlaps(pl, lv)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -4;
+    }
+  });
+
+  // カカシ：ゆっくり寄るだけ（踏み込みは鈍い）
+  (grp.K || []).forEach(sc => {
+    sc.ht = Math.max(0, sc.ht - 1);
+    const dir = (pl.x + pl.w/2) > (sc.x + sc.w/2) ? 1 : -1;
+    sc.vx = dir * 0.34;
+    sc.vy += G;
+    sc.x += sc.vx;
+    sc.y += sc.vy;
+    sc.x = Math.max(0, Math.min(W - sc.w, sc.x));
+    landOn(sc);
+    if (!pl.inv && overlaps(pl, sc)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -4;
+      pl.vx   = -pl.facing * 3;
+    }
+  });
+
+  // 化け猫：素早く歩き＋間欠ジャンプ
+  (grp.B || []).forEach(cat => {
+    cat.ht = Math.max(0, cat.ht - 1);
+    const dir = (pl.x + pl.w/2) > (cat.x + cat.w/2) ? 1 : -1;
+    cat.vx = dir * 1.02;
+    cat.vy += G;
+    if (cat.ground) {
+      cat.hopT++;
+      if (cat.hopT > 78) { cat.vy = -8.2; cat.hopT = 0; }
+    }
+    cat.x += cat.vx;
+    cat.y += cat.vy;
+    cat.x = Math.max(0, Math.min(W - cat.w, cat.x));
+    landOn(cat);
+    if (!pl.inv && overlaps(pl, cat)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -5;
+    }
+  });
+
+  // ボスAI（飛行は kind で速度・振幅・位相係数を変える）
+  (grp.boss || []).forEach(bo => {
+    bo.ht = Math.max(0, bo.ht - 1);
+    if (bo.mode === 'fly') {
+      let spd = 0.042, ax = 110, ay = 50, fcx = 0.62, fcy = 1;
+      if (bo.kind === 'giant_bat') {
+        spd = Math.max(0.022, 0.042 * Math.sqrt(108 / Math.max(bo.w, 72)));
+        const margin = 8;
+        const maxAx = Math.max(24, Math.min(bo.ox - margin, W - bo.ox - bo.w - margin));
+        ax = Math.min(130, ~~(maxAx * 0.92));
+        const roomY = Math.max(24, H - bo.oy - bo.h - 20);
+        ay = Math.min(90, Math.max(32, roomY * 0.42));
+        fcx = 0.62;
+        fcy = 1;
+      } else if (bo.kind === 'tengu') {
+        spd = 0.05;
+        ax = 128;
+        ay = 44;
+        fcx = 0.82;
+        fcy = 0.88;
+      } else if (bo.kind === 'yuki_onna') {
+        spd = 0.03;
+        ax = 88;
+        ay = 58;
+        fcx = 0.48;
+        fcy = 1.12;
+      }
+      bo.ti += spd;
+      bo.x = bo.ox + Math.cos(bo.ti * fcx) * ax;
+      bo.y = bo.oy + Math.sin(bo.ti * fcy) * ay;
+    } else {
+      const dir = (pl.x + pl.w/2) > (bo.x + bo.w/2) ? 1 : -1;
+      let spd = 0.95;
+      if (bo.kind === 'grave_wight') spd = 0.82;
+      else if (bo.kind === 'kappa') spd = 1.02;
+      else if (bo.kind === 'oni') spd = 1.18;
+      else if (bo.kind === 'night_lord') spd = 1.06;
+      bo.vx = dir * spd;
+      bo.vy += G;
+      bo.x += bo.vx;
+      bo.y += bo.vy;
+      bo.x = Math.max(0, Math.min(W - bo.w, bo.x));
+      landOn(bo);
+    }
+    if (!pl.inv && overlaps(pl, bo)) {
+      pl.hp--;
+      pl.inv  = true;
+      pl.invT = INVDUR;
+      pl.vy   = -5;
+      if (bo.mode === 'walk') pl.vx = -pl.facing * 4;
+    }
+  });
+
+  // ─── ムチ当たり判定 ──────────────────────────────
+  if (pl.atk && pl.atkT > WDUR * 0.38) {
+    const wx = pl.facing > 0 ? pl.x + pl.w : pl.x - WRANGE;
+    const wb = { x: wx, y: pl.y + 4, w: WRANGE, h: 20 };
+
+    // 【JS新機能④】Array.prototype.with (ES2023)
+    // 敵配列を直接変異させず、with()で不変更新する
+    // → HPが0になったら alive:false に切り替え
+    enemies.forEach((e, i) => {
+      if (!e.alive || e.ht > 0 || !overlaps(wb, e)) return;
+      const nhp = e.hp - 1;
+      enemies = enemies.with(i, { ...e, hp: nhp, alive: nhp > 0, ht: 24 });
+      if (nhp <= 0) {
+        if (e.t === 'boss') score += 600;
+        else if (e.t === 'b') score += 200;
+        else if (e.t === 'h') score += 180;
+        else if (e.t === 's') score += 120;
+        else if (e.t === 'd') score += 170;
+        else if (e.t === 'T') score += 220;
+        else if (e.t === 'n') score += 150;
+        else if (e.t === 'H') score += 210;
+        else if (e.t === 'L') score += 240;
+        else if (e.t === 'K') score += 130;
+        else if (e.t === 'B') score += 190;
+        else score += 100;
+        burst(e.x + e.w/2, e.y + e.h/2);
+      }
+    });
+
+    // ロウソクも破壊可能（with()で不変更新）
+    candles.forEach((c, i) => {
+      if (!c.a) return;
+      if (overlaps(wb, { x: c.x-5, y: c.y-20, w: 10, h: 24 })) {
+        candles = candles.with(i, { ...c, a: false });
+        score += 50;
+        burst(c.x, c.y - 8, 5);
+      }
+    });
+  }
+
+  // ─── パーティクル更新 ────────────────────────────
+  ptcls = ptcls.filter(p => p.life > 0);
+  ptcls.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.13; p.life--; });
+
+  // ─── 雑魚全滅後にボス出現 ─────────────────────────
+  if (stageBossDef && !bossSpawned && enemies.every(e => !e.alive)) {
+    enemies.push(mkBossFromDef(stageBossDef));
+    bossSpawned = true;
+    stageBossDef = null;
+  }
+
+  // ─── 終了判定 ─────────────────────────────────────
+  if (pl.hp <= 0) {
+    gs = 'gameover';
+    waitKey('Enter').then(initGame);
+  }
+  if (enemies.every(e => !e.alive)) {
+    gs = 'clear';
+    waitKey('Enter').then(onStageCleared);
+  }
+}
+
+function onStageCleared() {
+  if (STAGES_DATA && STAGES_DATA.stages && STAGES_DATA.stages.length)
+    stageIndex = (stageIndex + 1) % STAGES_DATA.stages.length;
+  initGame();
+}
+
+// ═══════════════════════════════════════════════════════
+//  描画
+// ═══════════════════════════════════════════════════════
+const NOW = () => Date.now();
+
+function draw() {
+  const P0 = getBgPalette();
+  cx.fillStyle = P0.bg;
+  cx.fillRect(0, 0, W, H);
+
+  drawBG();
+  PLATS.forEach(drawPlat);
+  candles.filter(c => c.a).forEach(drawCandle);
+
+  // 【JS新機能⑤】Array.prototype.toSorted (ES2023)
+  // 元配列を変異させずに y 座標昇順でソートし、
+  // 奥のエンティティが先に描画される「奥行き表現」を実現
+  enemies
+    .filter(e => e.alive)
+    .toSorted((a, b) => a.y - b.y)
+    .forEach(e => {
+      if (e.t === 'z') drawZombie(e);
+      else if (e.t === 'b') drawBat(e);
+      else if (e.t === 's') drawSkeleton(e);
+      else if (e.t === 'h') drawGhost(e);
+      else if (e.t === 'd') drawMedoje(e);
+      else if (e.t === 'T') drawKetossi(e);
+      else if (e.t === 'n') drawKnightMob(e);
+      else if (e.t === 'H') drawHeavyMosu(e);
+      else if (e.t === 'L') drawLeviathan(e);
+      else if (e.t === 'K') drawKakashi(e);
+      else if (e.t === 'B') drawBakeneko(e);
+      else if (e.t === 'boss') drawBoss(e);
+    });
+
+  drawPlayer();
+
+  ptcls.forEach(p => {
+    cx.globalAlpha = p.life / 36;
+    cx.fillStyle = p.col;
+    cx.fillRect(~~p.x - 2, ~~p.y - 2, 4, 4);
+  });
+  cx.globalAlpha = 1;
+
+  drawHUD();
+
+  const subStart = isMobileUa ? 'Enter ／ タップでスタート' : 'Enter キーでスタート';
+  const subGo    = isMobileUa ? 'Enter ／ タップでリスタート' : 'Enter キーでリスタート';
+  const subNext  = isMobileUa ? 'Enter ／ タップで次の面へ' : 'Enter で次の面へ';
+  if (gs === 'title')    drawScreen('✝ 燭城物語 ✝', '#ff2200', subStart);
+  if (gs === 'gameover') drawScreen('GAME OVER',      '#cc0000', subGo);
+  if (gs === 'clear')    drawScreen('✝ STAGE CLEAR ✝','#ffdd00', subNext);
+}
+
+// ─── 背景 ────────────────────────────────────────────
+function drawBG() {
+  const P = getBgPalette();
+  const bw = 64, bh = 24;
+  for (let r = 0; r * bh < 320; r++) {
+    const off = r % 2 ? bw / 2 : 0;
+    for (let c = -1; c * bw < W + bw; c++) {
+      const rx = c * bw - off;
+      cx.fillStyle = (r + c) % 3 === 0 ? P.brickC : (r + c) % 3 === 1 ? P.brickB : P.brickA;
+      cx.fillRect(rx + 1, r * bh + 1, bw - 2, bh - 2);
+    }
+  }
+  (P.win || []).forEach(([wx, wy]) => {
+    cx.fillStyle = P.winFrame;
+    cx.fillRect(wx, wy, 30, 38);
+    cx.fillStyle = P.winInner;
+    cx.fillRect(wx + 2, wy + 2, 12, 34);
+    cx.fillRect(wx + 16, wy + 2, 12, 34);
+    cx.fillStyle = P.winGlow;
+    cx.fillRect(wx + 6, wy + 6, 4, 4);
+    cx.fillRect(wx + 20, wy + 6, 4, 4);
+  });
+}
+
+// ─── プラットフォーム ─────────────────────────────────
+function drawPlat(p) {
+  const P = getBgPalette();
+  const isFloor = p.h > 16;
+  cx.fillStyle = isFloor ? P.floor : P.plat;
+  cx.fillRect(p.x, p.y, p.w, p.h);
+  cx.fillStyle = P.floorHi;
+  cx.fillRect(p.x, p.y, p.w, 4);
+  if (isFloor) {
+    cx.fillStyle = '#2a0e00';
+    for (let bx = p.x + 32; bx < p.x + p.w; bx += 32)
+      cx.fillRect(bx, p.y + 6, 2, p.h - 6);
+  }
+}
+
+// ─── ロウソク ─────────────────────────────────────────
+function drawCandle(c) {
+  const fl = Math.sin(NOW() / 80 + c.x) * 2;
+  cx.fillStyle = COL.candle;
+  cx.fillRect(c.x-4, c.y-4, 8, 4);
+  cx.fillRect(c.x-2, c.y-15, 4, 12);
+  cx.fillStyle = COL.flame1;
+  cx.beginPath();
+  cx.ellipse(c.x, c.y-19+fl*.3, 4, 5+fl, 0, 0, Math.PI*2);
+  cx.fill();
+  cx.fillStyle = COL.flame2;
+  cx.beginPath();
+  cx.ellipse(c.x, c.y-19+fl*.3, 2, 3+fl*.5, 0, 0, Math.PI*2);
+  cx.fill();
+}
+
+// ─── ゾンビ ───────────────────────────────────────────
+function drawZombie(z) {
+  cx.globalAlpha = (z.ht > 0 && ~~(z.ht/4)%2) ? 0.3 : 1;
+  const x = ~~z.x, y = ~~z.y;
+  cx.fillStyle = COL.zombieDark;
+  cx.fillRect(x+3, y+11, 14, 20);
+  cx.fillStyle = COL.zombie;
+  cx.fillRect(x+4, y+12, 12, 18);
+  cx.fillStyle = '#4c6e30';
+  cx.fillRect(x+3, y, 14, 13);
+  cx.fillStyle = COL.zombieEye;
+  cx.fillRect(x+5, y+4, 3, 3);
+  cx.fillRect(x+12, y+4, 3, 3);
+  // 腕（進行方向に伸ばす）
+  cx.fillStyle = COL.zombieDark;
+  cx.fillRect(z.vx >= 0 ? x+15 : x-6, y+13, 8, 5);
+  // 足（歩行アニメ）
+  const leg = ~~(NOW() / 220) % 2;
+  cx.fillStyle = '#242e18';
+  cx.fillRect(x+4,  y+29+(leg?2:0), 5, 8);
+  cx.fillRect(x+11, y+29+(leg?0:2), 5, 8);
+  cx.globalAlpha = 1;
+}
+
+// ─── コウモリ ─────────────────────────────────────────
+function drawBat(b) {
+  cx.globalAlpha = (b.ht > 0 && ~~(b.ht/4)%2) ? 0.3 : 1;
+  const x = ~~b.x, y = ~~b.y;
+  const flap = ~~(NOW() / 85) % 2;
+  cx.fillStyle = COL.batWing;
+  if (flap) {
+    cx.fillRect(x-14, y+1, 12, 7);
+    cx.fillRect(x+b.w+2, y+1, 12, 7);
+  } else {
+    cx.fillRect(x-12, y-6, 10, 12);
+    cx.fillRect(x+b.w+2, y-6, 10, 12);
+  }
+  cx.fillStyle = COL.bat;
+  cx.fillRect(x, y, b.w, b.h);
+  cx.fillStyle = COL.batEye;
+  cx.fillRect(x+3, y+3, 3, 3);
+  cx.fillRect(x+12, y+3, 3, 3);
+  cx.globalAlpha = 1;
+}
+
+function drawSkeleton(sk) {
+  cx.globalAlpha = (sk.ht > 0 && ~~(sk.ht/4)%2) ? 0.3 : 1;
+  const x = ~~sk.x, y = ~~sk.y;
+  cx.fillStyle = '#2a2a28';
+  cx.fillRect(x+2, y+10, 14, 22);
+  cx.fillStyle = '#c8c4b8';
+  cx.fillRect(x+3, y+11, 12, 20);
+  cx.fillStyle = '#e8e4d8';
+  cx.fillRect(x+4, y+2, 10, 12);
+  cx.fillStyle = '#2040a0';
+  cx.fillRect(x+5, y+5, 3, 3);
+  cx.fillRect(x+10, y+5, 3, 3);
+  const dir = sk.vx >= 0 ? 1 : -1;
+  cx.fillStyle = '#a0a098';
+  cx.fillRect(dir > 0 ? x+14 : x-4, y+14, 8, 4);
+  const leg = ~~(NOW() / 200) % 2;
+  cx.fillStyle = '#888880';
+  cx.fillRect(x+4,  y+30+(leg?2:0), 4, 8);
+  cx.fillRect(x+10, y+30+(leg?0:2), 4, 8);
+  cx.globalAlpha = 1;
+}
+
+function drawGhost(h) {
+  const pulse = 0.55 + Math.sin(NOW() / 200 + h.ox) * 0.2;
+  cx.globalAlpha = (h.ht > 0 && ~~(h.ht/4)%2) ? 0.2 : pulse;
+  const x = ~~h.x, y = ~~h.y;
+  cx.fillStyle = '#c8e8ff';
+  cx.fillRect(x+2, y+4, h.w-4, h.h-6);
+  cx.fillStyle = '#e8ffff';
+  cx.fillRect(x+4, y+2, h.w-8, h.h-10);
+  cx.fillStyle = '#4060a0';
+  cx.fillRect(x+6, y+7, 4, 4);
+  cx.fillRect(x+h.w-10, y+7, 4, 4);
+  const wob = Math.sin(NOW() / 120 + h.ti) * 3;
+  cx.fillStyle = 'rgba(200,230,255,0.35)';
+  cx.fillRect(x-4+wob, y+6, 6, h.h-10);
+  cx.fillRect(x+h.w-2+wob, y+6, 6, h.h-10);
+  cx.globalAlpha = 1;
+}
+
+function drawMedoje(m) {
+  const pulse = 0.5 + Math.sin(NOW() / 160 + m.ox) * 0.18;
+  cx.globalAlpha = (m.ht > 0 && ~~(m.ht/4)%2) ? 0.25 : pulse;
+  const x = ~~m.x, y = ~~m.y, w = m.w, h = m.h;
+  cx.fillStyle = '#3a6a40';
+  cx.fillRect(x+4, y+10, w-8, h-12);
+  cx.fillStyle = '#5a9850';
+  cx.fillRect(x+6, y+12, w-12, h-16);
+  cx.fillStyle = '#204030';
+  cx.fillRect(x+6, y+2, w-12, 12);
+  cx.fillStyle = '#c02060';
+  cx.fillRect(x+8, y+5, 4, 4);
+  cx.fillRect(x+w-12, y+5, 4, 4);
+  const sn = Math.sin(NOW() / 90 + m.ti);
+  cx.fillStyle = '#2a5028';
+  for (let i = 0; i < 5; i++) {
+    cx.fillRect(x - 2 + i * 5 + sn * 2, y - 4 - i * 2, 3, 6 + i);
+    cx.fillRect(x + w - 3 - i * 5 - sn * 2, y - 4 - i * 2, 3, 6 + i);
+  }
+  cx.globalAlpha = 1;
+}
+
+function drawKetossi(d) {
+  cx.globalAlpha = (d.ht > 0 && ~~(d.ht/4)%2) ? 0.3 : 1;
+  const x = ~~d.x, y = ~~d.y;
+  cx.fillStyle = '#3a3028';
+  cx.fillRect(x+2, y+8, 18, 10);
+  cx.fillStyle = '#5a4838';
+  cx.fillRect(x+4, y+10, 14, 6);
+  cx.fillStyle = '#201810';
+  cx.fillRect(x+4, y+4, 5, 5);
+  cx.fillRect(x+9, y+3, 5, 5);
+  cx.fillRect(x+14, y+4, 5, 5);
+  cx.fillStyle = '#e04020';
+  cx.fillRect(x+5, y+5, 2, 2);
+  cx.fillRect(x+11, y+4, 2, 2);
+  cx.fillRect(x+16, y+5, 2, 2);
+  const leg = ~~(NOW() / 100) % 2;
+  cx.fillStyle = '#282018';
+  cx.fillRect(x+4,  y+16+(leg?1:0), 5, 4);
+  cx.fillRect(x+13, y+16+(leg?0:1), 5, 4);
+  cx.globalAlpha = 1;
+}
+
+function drawKnightMob(kn) {
+  cx.globalAlpha = (kn.ht > 0 && ~~(kn.ht/4)%2) ? 0.3 : 1;
+  const x = ~~kn.x, y = ~~kn.y;
+  cx.fillStyle = '#303438';
+  cx.fillRect(x+3, y+8, 16, 28);
+  cx.fillStyle = '#586068';
+  cx.fillRect(x+4, y+10, 14, 24);
+  cx.fillStyle = '#889098';
+  cx.fillRect(x+6, y, 10, 12);
+  cx.fillStyle = '#102018';
+  cx.fillRect(x+7, y+4, 3, 2);
+  cx.fillRect(x+12, y+4, 3, 2);
+  const dir = kn.vx >= 0 ? 1 : -1;
+  cx.fillStyle = '#707880';
+  cx.fillRect(dir > 0 ? x+16 : x-6, y+14, 8, 4);
+  const leg = ~~(NOW() / 240) % 2;
+  cx.fillStyle = '#404850';
+  cx.fillRect(x+5,  y+34+(leg?2:0), 5, 6);
+  cx.fillRect(x+12, y+34+(leg?0:2), 5, 6);
+  cx.globalAlpha = 1;
+}
+
+function drawHeavyMosu(r) {
+  cx.globalAlpha = (r.ht > 0 && ~~(r.ht/4)%2) ? 0.3 : 1;
+  const x = ~~r.x, y = ~~r.y;
+  cx.fillStyle = '#4a3830';
+  cx.fillRect(x+2, y+4, 12, 8);
+  cx.fillStyle = '#786050';
+  cx.fillRect(x+3, y+5, 10, 6);
+  cx.fillStyle = '#201810';
+  cx.fillRect(x+10, y+2, 4, 3);
+  cx.fillStyle = '#c03020';
+  cx.fillRect(x+11, y+3, 2, 2);
+  cx.fillStyle = '#282018';
+  cx.fillRect(x+3, y+10, 3, 4);
+  cx.fillRect(x+10, y+10, 3, 4);
+  cx.globalAlpha = 1;
+}
+
+function drawLeviathan(lv) {
+  cx.globalAlpha = (lv.ht > 0 && ~~(lv.ht/4)%2) ? 0.35 : 0.92;
+  const x = ~~lv.x, y = ~~lv.y, w = lv.w, h = lv.h;
+  const seg = Math.sin(NOW() / 70 + lv.ti) * 2;
+  cx.fillStyle = '#204868';
+  cx.fillRect(x, y+4+seg, w, h-8);
+  cx.fillStyle = '#306898';
+  cx.fillRect(x+4, y+6+seg, w-8, h-12);
+  cx.fillStyle = '#102040';
+  cx.fillRect(x+w-10, y+4+seg, 8, 8);
+  cx.fillStyle = '#40a0c0';
+  cx.fillRect(x+w-7, y+6+seg, 3, 3);
+  cx.fillStyle = '#183050';
+  cx.fillRect(x-4, y+6+seg*0.5, 6, h-12);
+  cx.globalAlpha = 1;
+}
+
+function drawKakashi(sc) {
+  cx.globalAlpha = (sc.ht > 0 && ~~(sc.ht/4)%2) ? 0.3 : 1;
+  const x = ~~sc.x, y = ~~sc.y;
+  cx.fillStyle = '#5a4830';
+  cx.fillRect(x+4, y+6, 10, 32);
+  cx.fillStyle = '#8a7048';
+  cx.fillRect(x+5, y+28, 8, 8);
+  cx.fillStyle = '#3a2818';
+  cx.fillRect(x+2, y+2, 14, 8);
+  cx.fillStyle = '#2a2010';
+  cx.fillRect(x+5, y+4, 8, 4);
+  cx.fillStyle = '#604020';
+  cx.fillRect(x+1, y+10, 4, 22);
+  cx.fillRect(x+13, y+10, 4, 22);
+  const sway = Math.sin(NOW() / 400) * 2;
+  cx.fillStyle = '#7a6040';
+  cx.fillRect(x+6+sway, y+12, 6, 18);
+  cx.globalAlpha = 1;
+}
+
+function drawBakeneko(cat) {
+  cx.globalAlpha = (cat.ht > 0 && ~~(cat.ht/4)%2) ? 0.3 : 1;
+  const x = ~~cat.x, y = ~~cat.y;
+  cx.fillStyle = '#282018';
+  cx.fillRect(x+4, y+8, 12, 10);
+  cx.fillStyle = '#483828';
+  cx.fillRect(x+5, y+9, 10, 8);
+  cx.fillStyle = '#181008';
+  cx.fillRect(x+12, y+4, 8, 6);
+  cx.fillStyle = '#e8c020';
+  cx.fillRect(x+15, y+6, 3, 3);
+  cx.fillRect(x+18, y+6, 2, 2);
+  const tail = Math.sin(NOW() / 110) * 3;
+  cx.fillStyle = '#302018';
+  cx.fillRect(x-2+tail, y+10, 5, 8);
+  const leg = ~~(NOW() / 90) % 2;
+  cx.fillRect(x+5,  y+16+(leg?1:0), 4, 5);
+  cx.fillRect(x+11, y+16+(leg?0:1), 4, 5);
+  cx.globalAlpha = 1;
+}
+
+function bossAccentColor(kind) {
+  const t = {
+    giant_bat: COL.bat, grave_wight: '#4a6050', tengu: '#6a4a9c',
+    kappa: '#3a7850', yuki_onna: '#b8d8f0', oni: '#8a2020', night_lord: '#2a1850',
+  };
+  return t[kind] || '#5a5048';
+}
+
+/** 大コウモリ：ビットマップ（読み込み前は従来の矩形シルエット） */
+function drawBossGiantBat(b) {
+  const x = ~~b.x, y = ~~b.y;
+  const im = IMG_GIANT_BAT;
+  if (im.complete && im.naturalWidth > 0) {
+    const iw = im.naturalWidth, ih = im.naturalHeight;
+    const scale = Math.min(b.w / iw, b.h / ih);
+    const dw = ~~(iw * scale), dh = ~~(ih * scale);
+    const dx = x + ~~((b.w - dw) / 2);
+    const dy = y + ~~((b.h - dh) / 2);
+    cx.drawImage(im, dx, dy, dw, dh);
+    return;
+  }
+  const flap = ~~(NOW() / 72) % 2;
+  const wing = ~~(b.w * 0.48);
+  cx.fillStyle = COL.batWing;
+  if (flap) {
+    cx.fillRect(x - wing, y + 2, Math.max(8, wing - 2), ~~(b.h * 0.5));
+    cx.fillRect(x + b.w + 2, y + 2, Math.max(8, wing - 2), ~~(b.h * 0.5));
+  } else {
+    cx.fillRect(x - wing + 2, y - 4, Math.max(8, wing - 4), ~~(b.h * 0.7));
+    cx.fillRect(x + b.w + 2, y - 4, Math.max(8, wing - 4), ~~(b.h * 0.7));
+  }
+  cx.fillStyle = bossAccentColor('giant_bat');
+  cx.fillRect(x, y, b.w, b.h);
+  cx.fillStyle = '#ff2040';
+  cx.fillRect(x + ~~(b.w * 0.18), y + ~~(b.h * 0.28), 6, 6);
+  cx.fillRect(x + ~~(b.w * 0.62), y + ~~(b.h * 0.28), 6, 6);
+}
+
+/** 天狗：羽扇風の翼＋赤面・長鼻シルエット */
+function drawBossTengu(b) {
+  const x = ~~b.x, y = ~~b.y;
+  const t = NOW() / 90;
+  const fan = ~~(Math.sin(t) * 4 + 4);
+  cx.fillStyle = '#4a3820';
+  cx.fillRect(x - 10 - fan, y + 4, 14 + fan, b.h - 8);
+  cx.fillRect(x + b.w - 4 + fan, y + 4, 14 + fan, b.h - 8);
+  cx.fillStyle = '#5a4030';
+  for (let i = 0; i < 5; i++) {
+    cx.fillRect(x - 8 - fan + i * 2, y + 6 + i * 3, 3, 10 + i * 2);
+    cx.fillRect(x + b.w + 5 + fan - i * 2, y + 6 + i * 3, 3, 10 + i * 2);
+  }
+  cx.fillStyle = '#6a4a9c';
+  cx.fillRect(x + 4, y + 8, b.w - 8, b.h - 10);
+  cx.fillStyle = '#c02020';
+  cx.fillRect(x + ~~(b.w * 0.35), y + 4, ~~(b.w * 0.3), 14);
+  cx.fillStyle = '#ffd0a0';
+  cx.fillRect(x + ~~(b.w * 0.42), y + 18, 8, 16);
+  cx.fillStyle = '#201010';
+  cx.fillRect(x + ~~(b.w * 0.45), y + 22, 3, 8);
+}
+
+/** 雪女：翼なし・白い長衣＋袖の揺れ */
+function drawBossYuki(b) {
+  const x = ~~b.x, y = ~~b.y;
+  const sway = Math.sin(NOW() / 140) * 4;
+  cx.fillStyle = '#e8f4ff';
+  cx.fillRect(x + 2, y + 6, b.w - 4, b.h - 6);
+  cx.fillStyle = '#ffffff';
+  cx.fillRect(x + 6, y + 2, b.w - 12, ~~(b.h * 0.45));
+  cx.fillStyle = 'rgba(200,220,255,0.5)';
+  cx.fillRect(x - 6 + sway, y + 10, 8, b.h - 16);
+  cx.fillRect(x + b.w - 2 + sway, y + 10, 8, b.h - 16);
+  cx.fillStyle = '#304060';
+  cx.fillRect(x + ~~(b.w * 0.35), y + 10, 5, 5);
+  cx.fillRect(x + ~~(b.w * 0.55), y + 10, 5, 5);
+  cx.fillStyle = '#90b0d0';
+  cx.fillRect(x + ~~(b.w * 0.25), y + ~~(b.h * 0.55), b.w - ~~(b.w * 0.5), 4);
+}
+
+/** 墓守ワイト：痩せた長躯・青白い頭 */
+function drawBossWight(b) {
+  const x = ~~b.x, y = ~~b.y;
+  cx.fillStyle = '#2a3830';
+  cx.fillRect(x + 6, y + 12, b.w - 12, b.h - 14);
+  cx.fillStyle = '#5a7060';
+  cx.fillRect(x + 8, y + 16, b.w - 16, b.h - 24);
+  cx.fillStyle = '#8ab0a0';
+  cx.fillRect(x + ~~(b.w * 0.28), y + 2, ~~(b.w * 0.44), ~~(b.h * 0.38));
+  cx.fillStyle = '#204030';
+  cx.fillRect(x + ~~(b.w * 0.35), y + 12, 5, 5);
+  cx.fillRect(x + ~~(b.w * 0.55), y + 12, 5, 5);
+  cx.fillStyle = '#1a2018';
+  cx.fillRect(x + 4, y + ~~(b.h * 0.72), 6, ~~(b.h * 0.26));
+  cx.fillRect(x + b.w - 10, y + ~~(b.h * 0.72), 6, ~~(b.h * 0.26));
+}
+
+/** 河童：皿頭・緑胴・甲羅 */
+function drawBossKappa(b) {
+  const x = ~~b.x, y = ~~b.y;
+  cx.fillStyle = '#4a8a58';
+  cx.fillRect(x + 4, y + 14, b.w - 8, b.h - 16);
+  cx.fillStyle = '#2a6040';
+  cx.fillRect(x + 6, y + ~~(b.h * 0.42), b.w - 12, ~~(b.h * 0.38));
+  cx.fillStyle = '#6ab070';
+  cx.fillRect(x + ~~(b.w * 0.2), y + 6, ~~(b.w * 0.6), 12);
+  cx.fillStyle = '#c8d8e8';
+  cx.fillRect(x + ~~(b.w * 0.28), y - 2, ~~(b.w * 0.44), 8);
+  cx.fillStyle = '#203028';
+  cx.fillRect(x + ~~(b.w * 0.38), y + 18, 5, 4);
+  cx.fillRect(x + ~~(b.w * 0.55), y + 18, 5, 4);
+}
+
+/** 鬼：角・赤肌・広肩 */
+function drawBossOni(b) {
+  const x = ~~b.x, y = ~~b.y;
+  cx.fillStyle = '#5a1010';
+  cx.fillRect(x + 2, y + 10, b.w - 4, b.h - 12);
+  cx.fillStyle = '#9a3030';
+  cx.fillRect(x + 6, y + 14, b.w - 12, b.h - 20);
+  cx.fillStyle = '#4a0808';
+  cx.fillRect(x + ~~(b.w * 0.2), y + 2, 8, 12);
+  cx.fillRect(x + b.w - 28, y + 2, 8, 12);
+  cx.fillStyle = '#ffd0a0';
+  cx.fillRect(x + ~~(b.w * 0.25), y + 8, b.w - ~~(b.w * 0.5), ~~(b.h * 0.35));
+  cx.fillStyle = '#ffd000';
+  cx.fillRect(x + ~~(b.w * 0.35), y + 16, 6, 4);
+  cx.fillRect(x + ~~(b.w * 0.52), y + 16, 6, 4);
+  cx.fillStyle = '#101010';
+  cx.fillRect(x + ~~(b.w * 0.32), y + 18, 5, 5);
+  cx.fillRect(x + ~~(b.w * 0.58), y + 18, 5, 5);
+}
+
+/** 古城の主：マント・王冠風・赤眼 */
+function drawBossNightLord(b) {
+  const x = ~~b.x, y = ~~b.y;
+  cx.fillStyle = '#0a0418';
+  cx.fillRect(x, y + 8, b.w, b.h - 6);
+  cx.fillStyle = '#2a1850';
+  cx.fillRect(x + 4, y + 16, b.w - 8, b.h - 22);
+  cx.fillStyle = '#501878';
+  cx.fillRect(x - 4, y + 20, 8, b.h - 28);
+  cx.fillRect(x + b.w - 4, y + 20, 8, b.h - 28);
+  cx.fillStyle = '#d0a020';
+  cx.fillRect(x + ~~(b.w * 0.25), y + 2, b.w - ~~(b.w * 0.5), 10);
+  cx.fillStyle = '#e8d0c8';
+  cx.fillRect(x + ~~(b.w * 0.32), y + 12, ~~(b.w * 0.36), ~~(b.h * 0.28));
+  cx.fillStyle = '#ff1020';
+  cx.fillRect(x + ~~(b.w * 0.38), y + 18, 5, 5);
+  cx.fillRect(x + ~~(b.w * 0.54), y + 18, 5, 5);
+}
+
+function drawBoss(b) {
+  cx.globalAlpha = (b.ht > 0 && ~~(b.ht / 4) % 2) ? 0.3 : 1;
+  const k = b.kind;
+  if (b.mode === 'fly') {
+    if (k === 'giant_bat') drawBossGiantBat(b);
+    else if (k === 'tengu') drawBossTengu(b);
+    else if (k === 'yuki_onna') drawBossYuki(b);
+    else drawBossGiantBat(b);
+  } else {
+    if (k === 'grave_wight') drawBossWight(b);
+    else if (k === 'kappa') drawBossKappa(b);
+    else if (k === 'oni') drawBossOni(b);
+    else if (k === 'night_lord') drawBossNightLord(b);
+    else drawBossWight(b);
+  }
+  cx.globalAlpha = 1;
+}
+
+// ─── プレイヤー ───────────────────────────────────────
+function drawPlayer() {
+  if (pl.inv && ~~(pl.invT/6)%2) return; // 無敵中点滅
+  const x = ~~pl.x, y = ~~pl.y;
+
+  // ムチ（攻撃時）
+  if (pl.atk) {
+    const prog  = (WDUR - pl.atkT) / WDUR;
+    const ext   = Math.min(prog * 2, 1);
+    const ret   = pl.atkT < WDUR * .5 ? pl.atkT / (WDUR * .5) : 1;
+    const wlen  = WRANGE * ext * ret;
+    const dir   = pl.facing;
+    const sx    = dir > 0 ? x + pl.w : x;
+    const ex    = sx + dir * wlen;
+    const mx    = (sx + ex) / 2;
+    const curve = Math.sin(prog * Math.PI) * 18;
+
+    cx.strokeStyle = COL.whip;
+    cx.lineWidth   = 3;
+    cx.lineCap     = 'round';
+    cx.beginPath();
+    cx.moveTo(sx, y + 10);
+    cx.quadraticCurveTo(mx, y + 10 + curve, ex, y + 10 + Math.sin(prog*Math.PI*1.5)*5);
+    cx.stroke();
+    cx.fillStyle = COL.whipTip;
+    cx.fillRect(ex - 3, y + 8, 6, 6);
+  }
+
+  cx.save();
+  if (pl.facing < 0) {
+    cx.translate(x + pl.w, 0);
+    cx.scale(-1, 1);
+    cx.translate(-x, 0);
+  }
+
+  // マント
+  cx.fillStyle = COL.cape;
+  cx.fillRect(x+1, y+14, 7, 22);
+
+  // 胴体
+  cx.fillStyle = COL.plDark;
+  cx.fillRect(x+6, y+14, 10, 18);
+  cx.fillStyle = COL.pl;
+  cx.fillRect(x+7, y+15, 8, 16);
+
+  // 頭
+  cx.fillStyle = COL.skin;
+  cx.fillRect(x+5, y+2, 12, 13);
+  cx.fillStyle = COL.hair;
+  cx.fillRect(x+5, y+2, 12, 5);
+  cx.fillRect(x+5, y+2, 2, 8);
+  // 目
+  cx.fillStyle = '#000';
+  cx.fillRect(x+8, y+8, 2, 3);
+  cx.fillRect(x+13, y+8, 2, 3);
+
+  // 腕
+  cx.fillStyle = COL.plDark;
+  cx.fillRect(x+15, pl.atk ? y+14 : y+16, 6, 5);
+
+  // 足（歩行アニメ）
+  const la = pl.ground ? (pl.wf ? 3 : 0) : 4;
+  const lb = pl.ground ? (pl.wf ? 0 : 3) : 0;
+  cx.fillStyle = '#2a1000';
+  cx.fillRect(x+7, y+30+la, 5, 8);
+  cx.fillRect(x+12, y+30+lb, 5, 8);
+
+  cx.restore();
+}
+
+// ─── HUD ──────────────────────────────────────────────
+function drawHUD() {
+  if (!pl) return;
+  const totalStages = STAGES_DATA && STAGES_DATA.stages ? STAGES_DATA.stages.length : 0;
+  if (totalStages > 0 && gs === 'playing') {
+    cx.fillStyle = '#8899aa';
+    cx.font = '11px monospace';
+    cx.textAlign = 'center';
+    cx.fillText(`第 ${stageIndex + 1} / ${totalStages} 面`, W / 2, 16);
+    cx.textAlign = 'left';
+  }
+  cx.fillStyle = COL.score;
+  cx.font = 'bold 14px monospace';
+  cx.fillText(`SCORE  ${String(score).padStart(6,'0')}`, 10, 20);
+
+  for (let i = 0; i < 5; i++) {
+    cx.globalAlpha = i < pl.hp ? 1 : 0.18;
+    cx.fillStyle = COL.hp;
+    cx.font = '16px monospace';
+    cx.fillText('♥', W - 28 - i*22, 20);
+  }
+  cx.globalAlpha = 1;
+
+  const alive = enemies.filter(e => e.alive).length;
+  cx.fillStyle = '#888';
+  cx.font = '11px monospace';
+  const st = STAGES_DATA && STAGES_DATA.stages && STAGES_DATA.stages[stageIndex];
+  const stageLabel = st && st.name ? `${st.name} · ` : '';
+  cx.fillText(`${stageLabel}残り敵: ${alive} / ${enemies.length}`, 10, H - 8);
+}
+
+// ─── 画面オーバーレイ ─────────────────────────────────
+function drawScreen(title, col, sub) {
+  cx.fillStyle = 'rgba(0,0,0,0.72)';
+  cx.fillRect(0, 0, W, H);
+  cx.textAlign = 'center';
+  cx.fillStyle = col;
+  cx.font = 'bold 34px monospace';
+  cx.fillText(title, W/2, H/2 - 22);
+  cx.fillStyle = '#ddd';
+  cx.font = '15px monospace';
+  cx.fillText(sub, W/2, H/2 + 20);
+  cx.textAlign = 'left';
+}
+
+// ═══════════════════════════════════════════════════════
+//  タイトル画面・メインループ
+// ═══════════════════════════════════════════════════════
+
+// タイトル表示用ダミー状態
+pl = { hp: 5, inv: false };
+enemies = []; candles = []; ptcls = []; score = 0;
+
+loadStagesJson();
+
+initVirtualControls();
+syncVirtualControlsFromGs();
+window.addEventListener('resize', () => { window.scrollTo(0, 0); }, { passive: true });
+
+// Enter／タップでゲーム開始
+waitKey('Enter').then(() => initGame());
+
+(function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
