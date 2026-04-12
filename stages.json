@@ -6,7 +6,7 @@
     "fieldGuide": {
       "theme": "背景・足場色の切替キー（index.html の BG_THEMES と対応）。",
       "archetype.mob": "zombie | bat | skeleton | ghost | medoje | ketossi | knight | heavy_mosu | leviathan | kakashi | bakeneko",
-      "archetype.boss": "ボス識別子。描画・AIは種別ごとにディスパッチ。",
+      "archetype.boss": "ボス識別子（golem 含む）。描画・AIは種別ごとにディスパッチ。",
       "plats": "512x384 の Canvas 前提。地面は通常 y=320, h=64。",
       "candles": "{ x, y } — ロウソク。破壊でスコア。",
       "player": "面開始時のリスポーン位置。"
@@ -103,12 +103,12 @@
         { "archetype": "zombie", "x": 100, "y": 283 }
       ],
       "boss": {
-        "archetype": "tengu",
-        "displayName": "時を截つ天狗",
+        "archetype": "golem",
+        "displayName": "塔核の晶塊ゴーレム",
         "spawnAfterMobsCleared": true,
-        "x": 420,
-        "y": 110,
-        "stats": { "hp": 16, "w": 32, "h": 40 }
+        "x": 200,
+        "y": 118,
+        "stats": { "hp": 22, "w": 40, "h": 48 }
       },
       "candles": [
         { "x": 80, "y": 269 },

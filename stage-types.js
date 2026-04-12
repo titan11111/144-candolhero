@@ -28,7 +28,7 @@
 
 /**
  * @typedef {
- *   'giant_bat'|'grave_wight'|'tengu'|'kappa'|'yuki_onna'|'oni'|'night_lord'
+ *   'giant_bat'|'grave_wight'|'tengu'|'kappa'|'yuki_onna'|'oni'|'night_lord'|'golem'
  * } BossArchetype
  */
 
