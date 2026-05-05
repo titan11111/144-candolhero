@@ -257,6 +257,115 @@
         { "x": 246, "y": 159 },
         { "x": 256, "y": 319 }
       ]
+    },
+    {
+      "id": 7,
+      "name": "魔術師の空中廊下",
+      "theme": "chapel",
+      "lore": "彼女は床を踏まない。浮かぶ足場の上で、呪文の粒子が舞い続ける。",
+      "player": { "x": 32, "y": 283 },
+      "plats": [
+        { "x": 0,   "y": 320, "w": 512, "h": 64 },
+        { "x": 30,  "y": 265, "w": 80,  "h": 16 },
+        { "x": 170, "y": 225, "w": 80,  "h": 16 },
+        { "x": 310, "y": 185, "w": 80,  "h": 16 },
+        { "x": 420, "y": 145, "w": 80,  "h": 16 },
+        { "x": 190, "y": 130, "w": 80,  "h": 16 }
+      ],
+      "mobs": [
+        { "archetype": "ghost",      "x": 200, "y": 170 },
+        { "archetype": "medoje",     "x": 350, "y": 130 },
+        { "archetype": "bat",        "x": 130, "y": 120 },
+        { "archetype": "heavy_mosu", "x": 440, "y": 283 },
+        { "archetype": "leviathan",  "x": 280, "y": 170 }
+      ],
+      "boss": {
+        "archetype": "grave_wight",
+        "displayName": "上位ワイト — 魔術の申し子",
+        "spawnAfterMobsCleared": true,
+        "x": 300, "y": 100,
+        "stats": { "hp": 20, "w": 28, "h": 44 }
+      },
+      "candles": [
+        { "x": 68,  "y": 264 },
+        { "x": 208, "y": 224 },
+        { "x": 348, "y": 184 },
+        { "x": 228, "y": 129 }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "業火の牢獄",
+      "theme": "oni_corridor",
+      "lore": "鬼の息吹が壁を焦がし、鎖の音が追いかけてくる。逃げ場は最上段だけだ。",
+      "player": { "x": 24, "y": 283 },
+      "plats": [
+        { "x": 0,   "y": 320, "w": 512, "h": 64 },
+        { "x": 60,  "y": 270, "w": 90,  "h": 16 },
+        { "x": 200, "y": 230, "w": 90,  "h": 16 },
+        { "x": 360, "y": 190, "w": 90,  "h": 16 },
+        { "x": 100, "y": 155, "w": 320, "h": 16 }
+      ],
+      "mobs": [
+        { "archetype": "knight",   "x": 120, "y": 283 },
+        { "archetype": "kakashi",  "x": 320, "y": 283 },
+        { "archetype": "bakeneko", "x": 430, "y": 283 },
+        { "archetype": "skeleton", "x": 240, "y": 214 },
+        { "archetype": "ketossi",  "x": 180, "y": 139 },
+        { "archetype": "bat",      "x": 360, "y": 120 }
+      ],
+      "boss": {
+        "archetype": "oni",
+        "displayName": "炎獄の大鬼 — 二度目の降臨",
+        "spawnAfterMobsCleared": true,
+        "x": 240, "y": 92,
+        "stats": { "hp": 32, "w": 40, "h": 48 }
+      },
+      "candles": [
+        { "x": 100, "y": 269 },
+        { "x": 240, "y": 229 },
+        { "x": 400, "y": 189 },
+        { "x": 260, "y": 154 }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "永劫の帳 — 真なる終幕",
+      "theme": "throne",
+      "lore": "城主は死なない。彼は記憶であり、闇であり、もう一度始まる夜そのものだ。",
+      "player": { "x": 40, "y": 283 },
+      "plats": [
+        { "x": 0,   "y": 320, "w": 512, "h": 64 },
+        { "x": 80,  "y": 255, "w": 100, "h": 16 },
+        { "x": 240, "y": 215, "w": 100, "h": 16 },
+        { "x": 380, "y": 175, "w": 100, "h": 16 },
+        { "x": 140, "y": 155, "w": 240, "h": 16 },
+        { "x": 210, "y": 110, "w": 100, "h": 16 }
+      ],
+      "mobs": [
+        { "archetype": "knight",     "x": 150, "y": 283 },
+        { "archetype": "medoje",     "x": 350, "y": 283 },
+        { "archetype": "leviathan",  "x": 300, "y": 200 },
+        { "archetype": "kakashi",    "x": 420, "y": 159 },
+        { "archetype": "heavy_mosu", "x": 100, "y": 283 },
+        { "archetype": "bat",        "x": 250, "y": 95  },
+        { "archetype": "ghost",      "x": 180, "y": 140 }
+      ],
+      "boss": {
+        "archetype": "night_lord",
+        "displayName": "永劫の夜王 — 最終形態",
+        "spawnAfterMobsCleared": true,
+        "x": 240, "y": 58,
+        "stats": { "hp": 48, "w": 40, "h": 56 },
+        "phases": 3
+      },
+      "candles": [
+        { "x": 120, "y": 254 },
+        { "x": 280, "y": 214 },
+        { "x": 420, "y": 174 },
+        { "x": 248, "y": 154 },
+        { "x": 256, "y": 319 }
+      ]
     }
   ]
 }
