@@ -11,7 +11,8 @@
 <style>
 * {
   margin: 0; padding: 0; box-sizing: border-box;
-  touch-action: manipulation;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
@@ -21,6 +22,7 @@ html, body {
   width: 100%;
   height: 100%;
   overscroll-behavior: none;
+  touch-action: none;
 }
 body {
   background: #080010;
@@ -81,7 +83,11 @@ body {
   pointer-events: none;
   flex-direction: column;
   align-items: stretch;
-  padding: 8px 10px calc(6px + env(safe-area-inset-bottom, 0px));
+  padding:
+    8px
+    calc(10px + env(safe-area-inset-right, 0px))
+    calc(6px + env(safe-area-inset-bottom, 0px))
+    calc(10px + env(safe-area-inset-left, 0px));
   gap: 0;
   background: linear-gradient(0deg, rgba(8, 0, 16, 0.94) 0%, rgba(8, 0, 16, 0.5) 60%, transparent 100%);
 }
@@ -472,8 +478,7 @@ document.addEventListener('keydown', tryTitleBgmAfterGesture, { capture: true, p
 
 // ═══════════════════════════════════════════════════════
 //  iOS ダブルタップ防止
-//  touch-action: manipulation だけでは防げない場合があるため
-//  touchstart で 300ms 以内の 2 回目タップを明示的に preventDefault
+//  touchstart で 300ms 以内の 2 回目タップを明示的に preventDefault（CSS は touch-action: none 補助）
 // ═══════════════════════════════════════════════════════
 (function preventIosDoubleTap() {
   let lastTouchEnd = 0;
@@ -488,6 +493,7 @@ document.addEventListener('keydown', tryTitleBgmAfterGesture, { capture: true, p
   }, { passive: true, capture: true });
   // dblclick も念のためブロック（iOS Chrome 対策）
   document.addEventListener('dblclick', e => { e.preventDefault(); }, { passive: false });
+  document.addEventListener('contextmenu', e => { e.preventDefault(); }, { passive: false });
 })();
 
 // ═══════════════════════════════════════════════════════
@@ -881,6 +887,7 @@ function waitKey(code) {
     done = true;
     removeEventListener('keydown', onKey);
     removeEventListener('touchend', onTouch, touchOpts);
+    removeEventListener('pointerdown', onPointer, touchOpts);
     resolve();
   };
   const onKey = e => {
@@ -892,8 +899,16 @@ function waitKey(code) {
     e.preventDefault();
     finish();
   };
+  /** タップ／クリック即応（touchend より早い端末・マウス操作向け） */
+  const onPointer = e => {
+    if (e.target.closest && e.target.closest('#virtual-controls')) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    finish();
+  };
   addEventListener('keydown', onKey);
   addEventListener('touchend', onTouch, touchOpts);
+  addEventListener('pointerdown', onPointer, touchOpts);
   return promise;
 }
 
@@ -966,7 +981,12 @@ function initGame() {
   score = 0;
   gs = 'playing';
   const ctrl = document.getElementById('ctrl');
-  if (ctrl) ctrl.style.visibility = '';
+  if (ctrl) {
+    ctrl.style.visibility = '';
+    if (isMobileUa) {
+      ctrl.textContent = '◀▶ 移動 ｜ ↑ ジャンプ（2段） ｜ Z 攻撃 ｜ ↩ ステップ ｜ ⚔ 武器切替';
+    }
+  }
   syncVirtualControlsFromGs();
   syncBgmToGame();
   invalidateBgPatternCache();
@@ -1482,8 +1502,8 @@ function initVirtualControls() {
   });
   const jump = document.getElementById('cv-jump');
   const whip = document.getElementById('cv-whip');
-  if (jump) bindPointer(jump, ['ArrowUp']);
-  if (whip) bindPointer(whip, ['KeyZ']);
+  if (jump) bindPointer(jump, ['ArrowUp', 'KeyX']);
+  if (whip) bindPointer(whip, ['KeyZ', 'Space']);
   const step = document.getElementById('cv-step');
   if (step) bindPointer(step, ['KeyStep']);
 
