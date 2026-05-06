@@ -109,46 +109,48 @@ body {
 .vc-main > * { pointer-events: auto; }
 .cv-dpad {
   position: relative;
-  width: min(128px, 26vw);
-  height: min(128px, 26vw);
-  opacity: 0.78;
-}
-.cv-dpad-btn {
-  position: absolute;
-  width: 32.3%;
-  height: 32.3%;
+  width: clamp(148px, 21vw, 176px);
+  height: clamp(148px, 21vw, 176px);
+  opacity: 0.88;
+  pointer-events: auto;
   touch-action: none;
-  background: linear-gradient(145deg, rgba(60, 20, 20, 0.95), rgba(24, 8, 8, 0.98));
-  border: 2px solid rgba(180, 60, 40, 0.45);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #e8a070;
-  font-size: 14px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.08s, transform 0.08s;
-  box-shadow: 0 0 10px rgba(139, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
-.cv-dpad-btn:active, .cv-dpad-btn.pressed {
-  background: linear-gradient(145deg, rgba(100, 36, 28, 0.98), rgba(40, 12, 8, 0.99));
-  transform: translateY(1px);
-}
-.cv-dpad-btn.left  { top: 33.3%; left: 0; }
-.cv-dpad-btn.right { top: 33.3%; right: 0; }
-.cv-dpad-btn.up    { top: 0; left: 33.3%; }
-.cv-dpad-btn.down  { bottom: 0; left: 33.3%; }
-.cv-dpad::after {
-  content: '';
+.dpad {
   position: absolute;
-  top: 33.3%; left: 33.3%;
-  width: 33.4%; height: 33.4%;
-  background: rgba(20, 6, 10, 0.9);
-  border: 1px solid rgba(120, 40, 30, 0.35);
-  border-radius: 4px;
-  pointer-events: none;
+  inset: 0;
+  border-radius: 999px;
 }
+.dpad-vertical,
+.dpad-horizontal {
+  position: absolute;
+  background: linear-gradient(180deg, #ffffff44, #2a0808bb);
+  border: 2px solid rgba(180, 80, 40, 0.55);
+  box-shadow: 0 6px 0 #110000bb, 0 10px 20px #0006;
+}
+.dpad-vertical {
+  width: 38%; height: 100%;
+  left: 31%; top: 0;
+  border-radius: 20px;
+}
+.dpad-horizontal {
+  width: 100%; height: 38%;
+  left: 0; top: 31%;
+  border-radius: 20px;
+}
+.dpad-center {
+  position: absolute;
+  width: 42%; height: 42%;
+  left: 29%; top: 29%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff884422, #1a0000cc);
+  border: 2px solid rgba(180, 80, 40, 0.5);
+  box-shadow: inset 0 2px 8px #0008;
+}
+.dpad[data-up="1"]    .dpad-vertical   { background: linear-gradient(0deg,   #ffffff22, #cc441188); }
+.dpad[data-down="1"]  .dpad-vertical   { background: linear-gradient(180deg, #ffffff22, #cc441188); }
+.dpad[data-left="1"]  .dpad-horizontal { background: linear-gradient(90deg,  #cc441188, #ffffff22); }
+.dpad[data-right="1"] .dpad-horizontal { background: linear-gradient(270deg, #cc441188, #ffffff22); }
+.dpad.pressed { transform: scale(0.97); filter: brightness(1.25); }
 .cv-actions {
   display: flex;
   flex-direction: column;
@@ -225,10 +227,11 @@ body {
 <div id="virtual-controls" aria-label="タッチ操作">
   <div class="vc-main">
     <div class="cv-dpad" id="cv-dpad">
-      <div class="cv-dpad-btn up cv-btn-dir"    data-dir="up">▲</div>
-      <div class="cv-dpad-btn left cv-btn-dir"  data-dir="left">◀</div>
-      <div class="cv-dpad-btn right cv-btn-dir" data-dir="right">▶</div>
-      <div class="cv-dpad-btn down cv-btn-dir"  data-dir="down">▼</div>
+      <div class="dpad" id="dpad">
+        <div class="dpad-vertical"></div>
+        <div class="dpad-horizontal"></div>
+        <div class="dpad-center"></div>
+      </div>
     </div>
     <div class="cv-actions">
       <div class="cv-act-row">
@@ -519,6 +522,23 @@ function unlockSfxOnce() {
 }
 document.addEventListener('pointerdown', unlockSfxOnce, { once: true, passive: true });
 document.addEventListener('keydown', unlockSfxOnce, { once: true, passive: true });
+
+function playDpadClick() {
+  try {
+    const ctx = getSfxCtx();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 620;
+    gain.gain.setValueAtTime(0.03, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.022);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.022);
+  } catch (_) {}
+}
 
 /**
  * ムチの「ビシッ！」音を Web Audio API で合成して再生
@@ -1496,10 +1516,61 @@ function initVirtualControls() {
     el.addEventListener('pointercancel', up, { passive: false });
     el.addEventListener('lostpointercapture', lost);
   }
-  vc.querySelectorAll('.cv-btn-dir').forEach(btn => {
-    const c = mapDir[btn.dataset.dir];
-    if (c) bindPointer(btn, [c]);
-  });
+  // D-pad: 1本指でベクトル判定（斜め入力対応）
+  const dpadWrap = document.getElementById('cv-dpad');
+  const dpadEl   = document.getElementById('dpad');
+  let _dpadPid = null;
+
+  function _setDpad(up, down, left, right) {
+    K.ArrowUp    = up;
+    K.ArrowDown  = down;
+    K.ArrowLeft  = left;
+    K.ArrowRight = right;
+    if (dpadEl) {
+      dpadEl.dataset.up    = up    ? '1' : '0';
+      dpadEl.dataset.down  = down  ? '1' : '0';
+      dpadEl.dataset.left  = left  ? '1' : '0';
+      dpadEl.dataset.right = right ? '1' : '0';
+      dpadEl.classList.toggle('pressed', up || down || left || right);
+    }
+  }
+
+  function _calcDpad(e) {
+    const r    = dpadWrap.getBoundingClientRect();
+    const dx   = e.clientX - (r.left + r.width  / 2);
+    const dy   = e.clientY - (r.top  + r.height / 2);
+    const s    = r.width;
+    const dead = s * 0.13;
+    const thr  = s * 0.16;
+    if (Math.abs(dx) < dead && Math.abs(dy) < dead) {
+      _setDpad(false, false, false, false);
+      return;
+    }
+    _setDpad(dy < -thr, dy > thr, dx < -thr, dx > thr);
+  }
+
+  if (dpadWrap) {
+    dpadWrap.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      _dpadPid = e.pointerId;
+      try { dpadWrap.setPointerCapture(e.pointerId); } catch (_) {}
+      _calcDpad(e);
+      playDpadClick();
+    }, { passive: false });
+    dpadWrap.addEventListener('pointermove', e => {
+      if (e.pointerId !== _dpadPid) return;
+      e.preventDefault();
+      _calcDpad(e);
+    }, { passive: false });
+    const _relDpad = e => {
+      if (e.pointerId !== _dpadPid) return;
+      _dpadPid = null;
+      _setDpad(false, false, false, false);
+    };
+    dpadWrap.addEventListener('pointerup',          _relDpad);
+    dpadWrap.addEventListener('pointercancel',      _relDpad);
+    dpadWrap.addEventListener('lostpointercapture', () => _setDpad(false, false, false, false));
+  }
   const jump = document.getElementById('cv-jump');
   const whip = document.getElementById('cv-whip');
   if (jump) bindPointer(jump, ['ArrowUp', 'KeyX']);
